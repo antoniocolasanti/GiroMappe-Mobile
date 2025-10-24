@@ -1,0 +1,76 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip unzip libffi-dev libssl-dev
+
+      - name: Install Buildozer
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install buildozer Cython
+
+      - name: Ensure buildozer.spec
+        run: |
+          if [ ! -f buildozer.spec ]; then
+            buildozer init
+          fi
+          cat > buildozer.spec <<'EOF'
+          [app]
+          title = GiroMappe Mobile
+          package.name = giromappe
+          package.domain = org.example
+          source.dir = .
+          source.include_exts = py,kv
+          source.include_patterns = app/**,mobile_kivy/**
+          requirements = python3,kivy==2.3.0,kivymd==1.2.0,sqlite3,pillow,sqlalchemy,sqlmodel,pydantic,pydantic-settings,structlog,apscheduler,matplotlib,reportlab
+          orientation = portrait
+          fullscreen = 0
+          android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+          [buildozer]
+          log_level = 2
+          warn_on_root = 1
+          EOF
+
+      - name: Ensure main.py bootstrap
+        run: |
+          if [ ! -f main.py ]; then
+            cat > main.py <<'PY'
+            import sys, pathlib
+            ROOT = pathlib.Path(__file__).resolve().parent
+            if str(ROOT) not in sys.path:
+                sys.path.insert(0, str(ROOT))
+            from mobile_kivy.main import GiroMappeMobile
+            if __name__ == "__main__":
+                GiroMappeMobile().run()
+            PY
+          fi
+
+      - name: Build APK (debug)
+        run: |
+          buildozer -v android debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: giromappe-apk
+          path: bin/*.apk
