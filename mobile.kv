@@ -1,0 +1,245 @@
+#:kivy 2.3.0
+
+# ————————————————————————————————————————
+# Riga slot per il RecycleView del Calendar
+# ————————————————————————————————————————
+<SlotRow@BoxLayout>:
+    orientation: 'horizontal'
+    size_hint_y: None
+    height: '38dp'
+    # Proprietà impostate da RecycleView.data
+    time_text: ''
+    booked_text: ''
+    ai: False
+    slot_id: 0
+    Label:
+        markup: True
+        text: ("[b]*[/b] " if root.ai else "") + root.time_text + "  " + root.booked_text
+        size_hint_x: 0.7
+    Button:
+        text: "Seleziona"
+        size_hint_x: 0.3
+        on_release: app.sm.get_screen('calendar').select_slot(root.slot_id)
+
+# —————————————————————————————————————————————
+# Riga appuntamento per il RecycleView Appointments
+# —————————————————————————————————————————————
+<AppointmentRow@BoxLayout>:
+    orientation: 'horizontal'
+    size_hint_y: None
+    height: '44dp'
+    app_id: 0
+    title: ''
+    when_text: ''
+    status: ''
+    Label:
+        text: root.title + " — " + root.when_text + " [" + root.status + "]"
+        size_hint_x: .56
+        shorten: True
+    Button:
+        text: "Conferma"
+        size_hint_x: .14
+        on_release: app.sm.get_screen('appointments').action(root.app_id, 'confirm')
+    Button:
+        text: "Annulla"
+        size_hint_x: .14
+        on_release: app.sm.get_screen('appointments').action(root.app_id, 'cancel')
+    Button:
+        text: "Check-in"
+        size_hint_x: .16
+        on_release: app.sm.get_screen('appointments').action(root.app_id, 'checkin')
+
+# ——————————————————
+# HOME
+# ——————————————————
+<HomeScreen>:
+    name: "home"
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 8
+        Label:
+            text: "GiroMappe (Mobile)"
+            font_size: "22sp"
+            bold: True
+            size_hint_y: None
+            height: self.texture_size[1] + 12
+        Button:
+            text: "Calendar"
+            on_release: app.sm.current = "calendar"
+        Button:
+            text: "Nuova prenotazione (Calendar → Form)"
+            on_release: app.sm.current = "calendar"
+        Button:
+            text: "Appuntamenti"
+            on_release: app.sm.current = "appointments"
+
+# ——————————————————
+# CALENDAR
+# ——————————————————
+<CalendarScreen>:
+    name: "calendar"
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 8
+
+        # Topbar contatori
+        BoxLayout:
+            size_hint_y: None
+            height: "34dp"
+            spacing: 12
+            Label:
+                text: f"{root.count_liberi} liberi, {root.count_occupati} occupati, {root.count_ai} suggeriti AI"
+                bold: True
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+
+        # Filtri
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+            spacing: 8
+            TextInput:
+                text: root.date
+                hint_text: "YYYY-MM-DD"
+                on_text: root.date = self.text
+            Spinner:
+                text: root.office or "Ufficio"
+                values: root.offices
+                on_text:
+                    root.office = self.text
+                    root.load_slots()
+            CheckBox:
+                id: cb
+                active: root.solo_liberi
+                size_hint_x: None
+                width: "30dp"
+                on_active:
+                    root.solo_liberi = self.active
+                    root.load_slots()
+            Label:
+                text: "Solo liberi"
+                size_hint_x: None
+                width: self.texture_size[0] + 8
+
+        # Pulsanti azione
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+            spacing: 8
+            Button:
+                text: "Crea slot demo (12:00)"
+                on_release: root.create_demo_slot()
+            Button:
+                text: "Suggerisci (AI)"
+                on_release: root.suggest_ai()
+            Button:
+                text: "Carica"
+                on_release: root.load_slots()
+            Button:
+                text: "Prosegui"
+                on_release: root.proceed()
+            Button:
+                text: "Home"
+                on_release: app.sm.current = "home"
+
+        # Lista slot (RecycleView invariata)
+        RecycleView:
+            viewclass: 'SlotRow'
+            data: [ {'time_text': s['time_text'], 'booked_text': s['booked_text'], 'ai': s['ai'],         'slot_id': s['slot_id']} for s in root.slots ]
+            RecycleBoxLayout:
+                default_size: None, dp(38)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: 'vertical'
+
+# ——————————————————
+# FORM (prenotazione)
+# ——————————————————
+<FormScreen>:
+    name: "form"
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 8
+        Label:
+            text: "Prenotazione"
+            font_size: "20sp"
+            bold: True
+            size_hint_y: None
+            height: self.texture_size[1] + 8
+        GridLayout:
+            cols: 2
+            row_default_height: "40dp"
+            size_hint_y: None
+            height: self.minimum_height
+            Label:
+                text: "Nome"
+            TextInput:
+                text: root.user_name
+                on_text: root.user_name = self.text
+            Label:
+                text: "Cognome"
+            TextInput:
+                text: root.user_surname
+                on_text: root.user_surname = self.text
+            Label:
+                text: "Email"
+            TextInput:
+                text: root.email
+                on_text: root.email = self.text
+            Label:
+                text: "Codice Fiscale"
+            TextInput:
+                text: root.cf
+                on_text: root.cf = self.text
+            Label:
+                text: "Note"
+            TextInput:
+                text: root.notes
+                on_text: root.notes = self.text
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+            spacing: 8
+            Button:
+                text: "Invia"
+                on_release: root.submit()
+            Button:
+                text: "Annulla"
+                on_release: app.sm.current = "calendar"
+            Button:
+                text: "Home"
+                on_release: app.sm.current = "home"
+
+# ——————————————————
+# APPOINTMENTS (lista)
+# ——————————————————
+<AppointmentsScreen>:
+    name: "appointments"
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 8
+        BoxLayout:
+            size_hint_y: None
+            height: "40dp"
+            spacing: 8
+            Button:
+                text: "Refresh"
+                on_release: root.refresh()
+            Button:
+                text: "Home"
+                on_release: app.sm.current = "home"
+        RecycleView:
+            viewclass: 'AppointmentRow'
+            data: root.appointments_data
+            RecycleBoxLayout:
+                default_size: None, dp(44)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: 'vertical'

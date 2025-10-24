@@ -1,0 +1,12 @@
+[app]
+title = GiroMappe Mobile
+package.name = giromappe
+package.domain = org.example
+source.dir = .
+source.include_exts = py,kv
+requirements = python3,kivy,sqlite3
+orientation = portrait
+fullscreen = 0
+
+[buildozer]
+log_level = 2
