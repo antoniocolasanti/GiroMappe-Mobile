@@ -54,21 +54,6 @@ warn_on_root = 1
 EOF
           fi
 
-      - name: Ensure main.py bootstrap
-        shell: bash
-        run: |
-          if [ ! -f main.py ]; then
-cat > main.py <<'PY'
-import sys, pathlib
-ROOT = pathlib.Path(__file__).resolve().parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-from mobile_kivy.main import GiroMappeMobile
-if __name__ == "__main__":
-    GiroMappeMobile().run()
-PY
-          fi
-
       - name: Build APK (debug)
         run: |
           buildozer -v android debug
